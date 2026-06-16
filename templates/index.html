@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BigQuery Release Notes Hub & Tweet Composer</title>
+    <meta name="description" content="Track, search, and filter Google Cloud BigQuery release notes. Select updates and draft tweets instantly.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Main Style Sheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="app-sidebar" aria-label="Sidebar Navigation">
+            <div class="sidebar-brand">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-database"></i>
+                </div>
+                <div class="brand-text">
+                    <h2>BQ Notes</h2>
+                    <span>Cloud Intelligence</span>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav" aria-label="Main Navigation">
+                <a href="#" class="nav-item active" id="nav-all">
+                    <i class="fa-solid fa-list-check"></i>
+                    <span>All Updates</span>
+                </a>
+                <a href="#" class="nav-item" id="nav-features">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span>Features</span>
+                </a>
+                <a href="#" class="nav-item" id="nav-issues">
+                    <i class="fa-solid fa-bug"></i>
+                    <span>Issues & Fixes</span>
+                </a>
+                <a href="#" class="nav-item" id="nav-deprecations">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span>Deprecations</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-stats" id="stats-panel">
+                <h3>Dashboard Statistics</h3>
+                <div class="stat-card">
+                    <span class="stat-label">Total Notes</span>
+                    <span class="stat-value" id="stat-total">0</span>
+                </div>
+                <div class="stat-grid-mini">
+                    <div class="stat-mini-card feature">
+                        <span class="stat-mini-val" id="stat-feat-count">0</span>
+                        <span class="stat-mini-label">Features</span>
+                    </div>
+                    <div class="stat-mini-card issue">
+                        <span class="stat-mini-val" id="stat-issue-count">0</span>
+                        <span class="stat-mini-label">Issues</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="app-main">
+            <!-- Header -->
+            <header class="app-header">
+                <div class="header-left">
+                    <h1 id="main-heading">BigQuery Release Notes</h1>
+                    <p class="header-subtitle">Stay up-to-date with Google BigQuery feed updates and share them on X</p>
+                </div>
+                <div class="header-actions">
+                    <span class="last-updated-text" id="last-updated-time">Checking...</span>
+                    <button class="btn btn-primary" id="btn-refresh" title="Refresh Release Notes">
+                        <i class="fa-solid fa-rotate-right" id="refresh-spinner"></i>
+                        <span>Refresh Feed</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Dashboard controls (Search, Filters, Sort) -->
+            <section class="controls-section" aria-label="Search and Filters">
+                <div class="search-bar-container">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input type="text" id="search-input" placeholder="Search update keyword, feature details, links..." aria-label="Search Release Notes">
+                    <button class="btn-clear" id="btn-search-clear" style="display: none;"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                
+                <div class="filter-pills-container" id="filter-types-container" role="group" aria-label="Filter by Type">
+                    <button class="filter-pill active" data-type="all">All Types</button>
+                    <button class="filter-pill" data-type="Feature">Features</button>
+                    <button class="filter-pill" data-type="Issue">Issues</button>
+                    <button class="filter-pill" data-type="Deprecation">Deprecations</button>
+                    <button class="filter-pill" data-type="Change">Changes</button>
+                </div>
+                
+                <div class="sort-selector">
+                    <label for="sort-select"><i class="fa-solid fa-sort"></i> Sort</label>
+                    <select id="sort-select">
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                    </select>
+                </div>
+            </section>
+
+            <!-- Release Notes List Container -->
+            <section class="notes-feed-section" aria-label="Release Notes List">
+                <!-- Loader State -->
+                <div class="feed-loader" id="feed-loader">
+                    <div class="loading-wave">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                    <p>Fetching the latest release notes from Google Cloud...</p>
+                </div>
+
+                <!-- Error State -->
+                <div class="feed-error" id="feed-error" style="display: none;">
+                    <div class="error-icon"><i class="fa-solid fa-circle-exclamation"></i></div>
+                    <h3>Failed to Fetch Release Notes</h3>
+                    <p id="error-message">Unknown error occurred.</p>
+                    <button class="btn btn-outline" id="btn-error-retry">Retry Fetching</button>
+                </div>
+
+                <!-- Empty State -->
+                <div class="feed-empty" id="feed-empty" style="display: none;">
+                    <div class="empty-icon"><i class="fa-solid fa-folder-open"></i></div>
+                    <h3>No Release Notes Found</h3>
+                    <p>Try refining your search keyword or selection filters.</p>
+                </div>
+
+                <!-- Notes list -->
+                <div class="notes-list" id="notes-list">
+                    <!-- Dynamic Javascript injection -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Bottom Drawer for Multi-Selected items -->
+    <div class="selection-drawer" id="selection-drawer">
+        <div class="drawer-content">
+            <div class="drawer-info">
+                <span class="selection-counter" id="selection-count">0 selected</span>
+                <p class="drawer-subtext">Combine multiple updates to draft a single tweet summary</p>
+            </div>
+            <div class="drawer-actions">
+                <button class="btn btn-outline-light" id="btn-clear-selection">
+                    <i class="fa-solid fa-trash-can"></i>
+                    <span>Clear</span>
+                </button>
+                <button class="btn btn-tweet-gradient" id="btn-tweet-selected">
+                    <i class="fa-brands fa-x-twitter"></i>
+                    <span>Tweet Combined</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tweet Composer Modal -->
+    <div class="modal-backdrop" id="tweet-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-card">
+            <header class="modal-header">
+                <h2 id="modal-title"><i class="fa-brands fa-x-twitter"></i> Share to X / Twitter</h2>
+                <button class="btn-modal-close" id="btn-modal-close" aria-label="Close modal">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </header>
+            <div class="modal-body">
+                <div class="tweet-draft-container">
+                    <label for="tweet-textarea" class="sr-only">Tweet Content</label>
+                    <textarea id="tweet-textarea" placeholder="What's happening in Google BigQuery?"></textarea>
+                    
+                    <div class="tweet-meta-info">
+                        <span class="character-counter" id="char-counter">0 / 280</span>
+                    </div>
+                </div>
+                
+                <div class="modal-tips">
+                    <h4>💡 Pro-tip</h4>
+                    <p>Links and hashtags are automatically structured. You can edit the text directly before sharing.</p>
+                </div>
+            </div>
+            <footer class="modal-footer">
+                <button class="btn btn-outline" id="btn-copy-tweet">
+                    <i class="fa-solid fa-copy"></i>
+                    <span>Copy to Clipboard</span>
+                </button>
+                <button class="btn btn-tweet" id="btn-publish-tweet">
+                    <i class="fa-brands fa-x-twitter"></i>
+                    <span>Open Tweet Intent</span>
+                </button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- Toast Notification for Copy feedback -->
+    <div class="toast-notification" id="toast-notify" role="alert">
+        <i class="fa-solid fa-circle-check"></i>
+        <span id="toast-text">Copied to clipboard!</span>
+    </div>
+</body>
+</html>
